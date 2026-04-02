@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>おそうじ本舗 大井町店</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useMemo, useCallback, createContext, useContext } = React;
+
+    const DEFAULT_SERVICES = [
+      {
+        id: "aircon_wall", category: "エアコン", name: "壁掛けエアコンクリーニング", desc: "壁掛けタイプのエアコンを分解洗浄",
+        detail: { scope: ["前面パネル・フィルター","熱交換器（アルミフィン）","送風ファン","ドレンパン","本体カバー・ルーバー"], time: "約60〜90分（お掃除機能付き約120〜150分）", note: "養生→分解→高圧洗浄→組立→動作確認", recommend: "2年以上未クリーニングのエアコンに", youtube: "" },
+        variants: [{ id: "normal", label: "お掃除機能なし", price1: 12100, priceN: 11000 },{ id: "auto", label: "お掃除機能付き", price1: 20900, priceN: 19800 }],
+        quantityLabel: "台数", maxQty: 6,
+        options: [
+          { id: "full_d", label: "完全分解洗浄", price: 8800, per: "台", qtyable: true, detail: { text: "送風ファン・ドレンパンまで外して徹底洗浄", images: ["https://placehold.co/400x260/e0f2fe/0284c7?text=Before","https://placehold.co/400x260/dcfce7/16a34a?text=After"], youtube: "" }},
+          { id: "eco", label: "エコ洗浄", price: 1100, per: "台", qtyable: true, detail: { text: "アルカリ電解水使用。赤ちゃん・ペットに安心", images: [], youtube: "" }},
+          { id: "coating", label: "防カビチタンコーティング", price: 3300, per: "台", qtyable: true, detail: { text: "防カビ・消臭・抗菌効果でキレイを長期間キープ", images: [], youtube: "" }},
+          { id: "outdoor", label: "室外機クリーニング", price: 5500, per: "台", qtyable: true, detail: { text: "室外機のフィン汚れを除去し冷暖房効率UP", images: ["https://placehold.co/400x260/fee2e2/dc2626?text=Before","https://placehold.co/400x260/dcfce7/16a34a?text=After"], youtube: "" }},
+          { id: "bug", label: "防虫キャップ", price: 1100, per: "台", qtyable: true, detail: { text: "ドレンホースからの虫の侵入を防止", images: [], youtube: "" }},
+          { id: "steam", label: "スチーム除菌", price: 1100, per: "台", qtyable: true, detail: { text: "高温スチームでカビ・雑菌を除菌", images: [], youtube: "" }},
+        ],
+      },
+      {
+        id: "aircon_ceil", category: "エアコン", name: "天井埋め込みエアコンクリーニング", desc: "天井カセット型エアコンの分解洗浄",
+        detail: { scope: ["フィルター","熱交換器","ドレンパン","吹出口・ルーバー"], time: "約90〜120分", note: "1方向・2方向対応。4方向は別途相談", recommend: "オフィス・店舗の天井型に", youtube: "" },
+        variants: [{ id: "std", label: "標準", price1: 27500, priceN: 27500 }], quantityLabel: "台数", maxQty: 4,
+        options: [
+          { id: "auto_c", label: "お掃除機能付き", price: 8800, per: "台", qtyable: true, detail: { text: "お掃除機能付きは追加分解が必要", images: [], youtube: "" }},
+          { id: "eco", label: "エコ洗浄", price: 1100, per: "台", qtyable: true, detail: { text: "環境配慮型洗剤で洗浄", images: [], youtube: "" }},
+          { id: "coat", label: "防カビチタンコーティング", price: 5500, per: "台", qtyable: true, detail: { text: "天井型は結露が多く防カビが有効", images: [], youtube: "" }},
+          { id: "out", label: "室外機クリーニング", price: 8800, per: "台", qtyable: true, detail: { text: "業務用室外機の高圧洗浄", images: [], youtube: "" }},
+        ],
+      },
+      {
+        id: "vent", category: "キッチン", name: "換気扇クリーニング", desc: "レンジフード・換気扇の油汚れを徹底洗浄",
+        detail: { scope: ["レンジフードカバー","フィルター","シロッコファン","フード内部"], time: "約120〜150分", note: "専用洗剤で浸け置き＆ブラッシング", recommend: "年1回で換気効率維持・火災予防に", youtube: "" },
+        variants: [{ id: "std", label: "標準", price1: 19800, priceN: 19800 }], quantityLabel: "台数", maxQty: 2,
+        options: [
+          { id: "heavy", label: "特殊汚れ（0.5㎡）", price: 3300, per: "箇所", detail: { text: "頑固な焦げ付き・長年の油汚れに対応", images: [], youtube: "" }},
+          { id: "island", label: "アイランド型", price: 2200, per: "式", detail: { text: "四方アクセス必要で追加料金", images: [], youtube: "" }},
+          { id: "auto_f", label: "お掃除機能付き", price: 6600, per: "式", detail: { text: "自動洗浄では取りきれない油汚れを除去", images: [], youtube: "" }},
+          { id: "stove", label: "コンロセット", price: 5500, per: "式", detail: { text: "コンロ・五徳もまとめて洗浄", images: [], youtube: "" }},
+          { id: "kit_set", label: "キッチンセット", price: 16500, per: "式", detail: { text: "キッチン全体をセットでお得に", images: [], youtube: "" }},
+        ],
+      },
+      {
+        id: "kitchen", category: "キッチン", name: "キッチンクリーニング", desc: "シンク・コンロ・壁面まで丸ごと洗浄",
+        detail: { scope: ["シンク・蛇口","コンロ・五徳","調理台","壁面","吊り戸棚表面"], time: "約120〜180分", note: "水アカ・油汚れ・焦げ付きを除去", recommend: "年末大掃除や引越し前後に", youtube: "" },
+        variants: [{ id: "std", label: "標準", price1: 19800, priceN: 19800 }], quantityLabel: "箇所", maxQty: 2,
+        options: [
+          { id: "large", label: "3.5m以上またはL型", price: 5500, per: "式", detail: { text: "広いキッチンは追加料金", images: [], youtube: "" }},
+          { id: "fan_s", label: "換気扇セット", price: 16500, per: "式", detail: { text: "換気扇もまとめてお得", images: [], youtube: "" }},
+          { id: "sink", label: "シンク研磨＆撥水コート", price: 4400, per: "式", detail: { text: "ステンレスの輝きを復活", images: ["https://placehold.co/400x260/e0f2fe/0284c7?text=Before","https://placehold.co/400x260/dcfce7/16a34a?text=After"], youtube: "" }},
+          { id: "coat", label: "お手入れ簡単コーティング", price: 9900, per: "式", detail: { text: "汚れが付きにくくなるコーティング", images: [], youtube: "" }},
+        ],
+      },
+      {
+        id: "bath", category: "水まわり", name: "浴室クリーニング", desc: "浴槽・壁・床・天井・ドアまで丸ごと洗浄",
+        detail: { scope: ["浴槽","壁面・天井","床","ドア","蛇口・シャワー","排水口","鏡"], time: "約150〜180分", note: "カビ・水アカ・石鹸カスを徹底除去", recommend: "カビ臭・ピンク汚れが気になる方に", youtube: "" },
+        variants: [{ id: "std", label: "標準", price1: 19800, priceN: 19800 }], quantityLabel: "箇所", maxQty: 2,
+        options: [
+          { id: "mirror", label: "鏡の水アカ除去＆コーティング", price: 3300, per: "式", detail: { text: "ウロコ状水アカを研磨除去", images: ["https://placehold.co/400x260/e0f2fe/0284c7?text=Before","https://placehold.co/400x260/dcfce7/16a34a?text=After"], youtube: "" }},
+          { id: "dryer", label: "浴室乾燥機クリーニング", price: 7700, per: "台", detail: { text: "内部のホコリ・カビを分解洗浄", images: [], youtube: "" }},
+          { id: "apron", label: "エプロン内部洗浄", price: 3300, per: "式", detail: { text: "浴槽下の見えないカビ汚れを除去", images: ["https://placehold.co/400x260/fef2f2/dc2626?text=Before","https://placehold.co/400x260/dcfce7/16a34a?text=After"], youtube: "" }},
+          { id: "apron_h", label: "エプロン高圧洗浄＆防カビ", price: 7700, per: "式", detail: { text: "高圧洗浄+防カビコートで長期間清潔", images: [], youtube: "" }},
+          { id: "mold", label: "浴室防カビコート", price: 3300, per: "式", detail: { text: "カビ再発生を抑制", images: [], youtube: "" }},
+          { id: "wash_s", label: "洗面台セット", price: 8250, per: "式", detail: { text: "浴室+洗面台のお得なセット", images: [], youtube: "" }},
+        ],
+      },
+      {
+        id: "toilet", category: "水まわり", name: "トイレクリーニング", desc: "便器・床・壁・換気扇まで徹底洗浄",
+        detail: { scope: ["便器内部・外部","温水洗浄便座","床・巾木","壁面","換気扇カバー"], time: "約60〜90分", note: "尿石・黄ばみ・黒ずみを専用洗剤で除去", recommend: "臭いが気になる方に", youtube: "" },
+        variants: [{ id: "std", label: "標準", price1: 9900, priceN: 9900 }], quantityLabel: "箇所", maxQty: 3,
+        options: [
+          { id: "extra", label: "便器追加", price: 5500, per: "基", detail: { text: "2基目以降の追加クリーニング", images: [], youtube: "" }},
+          { id: "wax", label: "ワックス（1㎡）", price: 1100, per: "㎡", detail: { text: "床の汚れ染み込み防止", images: [], youtube: "" }},
+          { id: "coat", label: "お手入れ簡単コーティング", price: 5500, per: "式", detail: { text: "汚れが付きにくく落ちやすい状態に", images: [], youtube: "" }},
+        ],
+      },
+      {
+        id: "wash_st", category: "水まわり", name: "洗面台クリーニング", desc: "洗面ボウル・鏡・蛇口・収納まで洗浄",
+        detail: { scope: ["洗面ボウル","鏡","蛇口","カウンター","収納棚表面","排水口"], time: "約60〜90分", note: "水アカ・黄ばみ・カビを除去", recommend: "定期的なプロクリーニングで清潔に", youtube: "" },
+        variants: [{ id: "std", label: "標準", price1: 9350, priceN: 9350 }], quantityLabel: "箇所", maxQty: 2,
+        options: [
+          { id: "large", label: "横幅1.2m以上", price: 2200, per: "式", detail: { text: "ワイドタイプは追加料金", images: [], youtube: "" }},
+          { id: "bath_s", label: "浴室セット", price: 18700, per: "式", detail: { text: "洗面台+浴室のお得なセット", images: [], youtube: "" }},
+          { id: "coat", label: "お手入れ簡単コーティング", price: 5500, per: "式", detail: { text: "水アカ・汚れが付きにくくなる", images: [], youtube: "" }},
+        ],
+      },
+      {
+        id: "wash_v", category: "水まわり", name: "縦型洗濯機クリーニング", desc: "洗濯槽裏のカビ・汚れを除去",
+        detail: { scope: ["洗濯槽（表・裏）","パルセーター","糸くずフィルター","フタ裏","外装"], time: "通常約120分 / 完全分解約180〜240分", note: "槽裏のカビ・雑菌を徹底洗浄", recommend: "洗濯物の臭い・黒いカスが付く方に", youtube: "" },
+        variants: [{ id: "std", label: "通常分解", price1: 12100, priceN: 12100 },{ id: "full", label: "完全分解洗浄", price1: 23100, priceN: 23100 }], quantityLabel: "台数", maxQty: 2,
+        options: [
+          { id: "hitachi", label: "日立製", price: 5500, per: "台", qtyable: true, detail: { text: "日立製は構造上追加工程が必要", images: [], youtube: "" }},
+          { id: "pan", label: "洗濯パン", price: 2200, per: "台", qtyable: true, detail: { text: "洗濯機下の防水パンを清掃", images: [], youtube: "" }},
+        ],
+      },
+      {
+        id: "wash_d", category: "水まわり", name: "ドラム式洗濯機クリーニング", desc: "ドラム式洗濯機の分解洗浄",
+        detail: { scope: ["ドラム内部","ドアパッキン","洗剤投入口","乾燥フィルター","排水フィルター"], time: "約150〜180分", note: "乾燥経路のカビ・ホコリも除去", recommend: "乾燥時間が長くなった方に", youtube: "" },
+        variants: [{ id: "std", label: "標準", price1: 18700, priceN: 18700 }], quantityLabel: "台数", maxQty: 2,
+        options: [{ id: "pan", label: "洗濯パン", price: 2200, per: "台", qtyable: true, detail: { text: "ドラム式は重量があるため移動含めプロに", images: [], youtube: "" }}],
+      },
+      {
+        id: "fridge", category: "キッチン", name: "冷蔵庫クリーニング", desc: "庫内・ドアパッキン・外装まで洗浄",
+        detail: { scope: ["庫内全体","棚板・仕切り","ドアパッキン","製氷機周り","外装"], time: "約60〜90分", note: "庫内を徹底除菌洗浄", recommend: "臭いが気になる方・引越し前後に", youtube: "" },
+        variants: [{ id: "std", label: "標準", price1: 11000, priceN: 11000 }], quantityLabel: "台数", maxQty: 2,
+        options: [{ id: "large", label: "500L以上", price: 5500, per: "台", qtyable: true, detail: { text: "大型冷蔵庫は作業時間延長のため追加", images: [], youtube: "" }}],
+      },
+    ];
+
+    const fmt = (n) => "¥" + n.toLocaleString();
+    const genId = () => Math.random().toString(36).slice(2, 8);
+
+    const extractYoutubeId = (url) => {
+      if (!url) return null;
+      const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([a-zA-Z0-9_-]{11})/);
+      return m ? m[1] : null;
+    };
+
+    const Chevron = ({ open, cls = "" }) => (
+      <svg className={`w-4 h-4 transition-transform duration-200 ${open ? "rotate-180" : ""} ${cls}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+      </svg>
+    );
+
+    const InfoBtn = ({ open, onClick, label = "詳細" }) => (
+      <button onClick={(e) => { e.stopPropagation(); onClick(); }} className="flex items-center gap-0.5 text-xs text-gray-400 hover:text-blue-500 transition-colors mt-0.5">
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        <span>{open ? "閉じる" : label}</span><Chevron open={open} cls="text-gray-300" />
+      </button>
+    );
+
+    const YoutubeEmbed = ({ url }) => {
+      const vid = extractYoutubeId(url);
+      if (!vid) return null;
+      return <div className="mt-2 rounded-lg overflow-hidden border border-gray-200" style={{ position: "relative", paddingBottom: "56.25%" }}><iframe src={`https://www.youtube-nocookie.com/embed/${vid}`} title="YouTube" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: 0 }} /></div>;
+    };
+
+    const MediaGrid = ({ images, youtube }) => (
+      <>
+        {images && images.length > 0 && (
+          <div className={`mt-2 grid gap-2 ${images.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+            {images.map((src, i) => <img key={i} src={src} alt="" className="w-full rounded-md border border-gray-200 object-cover" style={{ aspectRatio: "400/260" }} onError={(e) => { e.target.style.display = "none"; }} />)}
+          </div>
+        )}
+        <YoutubeEmbed url={youtube} />
+      </>
+    );
+
+    const CatBadge = ({ cat }) => {
+      const c = { エアコン: "bg-blue-100 text-blue-700", キッチン: "bg-orange-100 text-orange-700", 水まわり: "bg-cyan-100 text-cyan-700" };
+      return <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c[cat] || "bg-gray-100 text-gray-600"}`}>{cat}</span>;
+    };
+
+    const calcTotal = (svc, sel) => {
+      if (!sel) return 0;
+      const v = svc.variants.find((x) => x.id === sel.variantId) || svc.variants[0];
+      const q = sel.qty || 1;
+      const up = q >= 2 ? v.priceN : v.price1;
+      const ot = Object.entries(sel.optionQtys || {}).reduce((s, [oid, oq]) => {
+        if (oq <= 0) return s;
+        const o = svc.options.find((x) => x.id === oid);
+        return s + (o ? o.price * oq : 0);
+      }, 0);
+      return up * q + ot;
+    };
+
+    const OQC = ({ value, max, onChange }) => (
+      <div className="flex items-center gap-1">
+        <button onClick={(e) => { e.stopPropagation(); onChange(Math.max(0, value - 1)); }} className="w-7 h-7 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold flex items-center justify-center">−</button>
+        <span className="w-6 text-center text-sm font-bold text-gray-800">{value}</span>
+        <button onClick={(e) => { e.stopPropagation(); onChange(Math.min(max, value + 1)); }} className="w-7 h-7 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold flex items-center justify-center">+</button>
+      </div>
+    );
+
+    const CustomerView = ({ services }) => {
+      const [sel, setSel] = useState({});
+      const [fCat, setFCat] = useState("すべて");
+      const [showSum, setShowSum] = useState(false);
+      const [form, setForm] = useState({ name: "", tel: "", email: "", date: "", note: "" });
+      const [svcDetail, setSvcDetail] = useState({});
+      const [optDetail, setOptDetail] = useState({});
+
+      const cats = ["すべて", ...Array.from(new Set(services.map((s) => s.category)))];
+      const toggle = useCallback((id) => setSel((p) => { if (p[id]) { const n = { ...p }; delete n[id]; return n; } const svc = services.find((s) => s.id === id); return { ...p, [id]: { variantId: svc.variants[0].id, qty: 1, optionQtys: {} } }; }), [services]);
+      const upd = useCallback((id, patch) => setSel((p) => ({ ...p, [id]: { ...p[id], ...patch } })), []);
+      const gt = useMemo(() => Object.entries(sel).reduce((s, [id, sl]) => { const svc = services.find((x) => x.id === id); return s + calcTotal(svc, sl); }, 0), [sel, services]);
+      const sc = Object.keys(sel).length;
+      const filtered = fCat === "すべて" ? services : services.filter((s) => s.category === fCat);
+
+      if (showSum) {
+        const items = Object.entries(sel).map(([id, sl]) => {
+          const svc = services.find((s) => s.id === id); const v = svc.variants.find((x) => x.id === sl.variantId);
+          const opts = Object.entries(sl.optionQtys || {}).filter(([, q]) => q > 0).map(([oid, q]) => { const o = svc.options.find((x) => x.id === oid); return o ? { label: o.label, qty: q, price: o.price * q } : null; }).filter(Boolean);
+          return { svc, sl, v, opts, sub: calcTotal(svc, sl) };
+        });
+        return (
+          <div className="max-w-lg mx-auto p-4 min-h-screen bg-gray-50">
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-5">
+                <button onClick={() => setShowSum(false)} className="text-blue-100 text-sm mb-2 hover:text-white">← 戻る</button>
+                <h2 className="text-white text-lg font-bold">お見積もり内容</h2>
+              </div>
+              <div className="p-4 space-y-3">
+                {items.map(({ svc, sl, v, opts, sub }) => (
+                  <div key={svc.id} className="border border-gray-100 rounded-xl p-3">
+                    <div className="flex items-center gap-2"><div className="flex-1"><p className="font-bold text-sm">{svc.name}</p><p className="text-xs text-gray-500">{v.label} × {sl.qty}{svc.quantityLabel}</p></div><span className="font-bold text-blue-600">{fmt(sub)}</span></div>
+                    {opts.length > 0 && <div className="mt-2 space-y-1">{opts.map((o) => <div key={o.label} className="flex justify-between text-xs"><span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{o.label}×{o.qty}</span><span className="text-gray-500">+{fmt(o.price)}</span></div>)}</div>}
+                  </div>
+                ))}
+              </div>
+              <div className="mx-4 border-t" /><div className="p-4 flex justify-between items-center"><span className="font-medium text-gray-600">合計（税込）</span><span className="text-2xl font-bold text-blue-600">{fmt(gt)}</span></div>
+              <div className="mx-4 border-t" />
+              <div className="p-4 space-y-3">
+                <h3 className="font-bold text-sm">お客様情報</h3>
+                {[{k:"name",l:"お名前",t:"text",p:"山田 太郎"},{k:"tel",l:"電話番号",t:"tel",p:"090-0000-0000"},{k:"email",l:"メールアドレス",t:"email",p:"you@example.com"},{k:"date",l:"ご希望日（任意）",t:"date",p:""}].map(({k,l,t,p})=>(
+                  <div key={k}><label className="text-xs text-gray-500 mb-1 block">{l}{k!=="date"&&<span className="text-red-400 ml-0.5">*</span>}</label>
+                  <input type={t} placeholder={p} value={form[k]} onChange={(e)=>setForm(f=>({...f,[k]:e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" /></div>
+                ))}
+                <div><label className="text-xs text-gray-500 mb-1 block">ご要望・備考（任意）</label><textarea rows={3} placeholder="気になる汚れ、時間帯など" value={form.note} onChange={(e)=>setForm(f=>({...f,note:e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-400" /></div>
+                <button className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-bold py-3.5 rounded-xl shadow-lg text-sm active:scale-[0.98]" onClick={()=>alert("【デモ】送信\n合計: "+fmt(gt))}>この内容で問い合わせる</button>
+                <div className="flex gap-2">
+                  <button className="flex-1 bg-green-50 text-green-700 font-bold py-3 rounded-xl text-sm border border-green-200" onClick={()=>alert("LINE送信")}>📱 LINE</button>
+                  <button className="flex-1 bg-blue-50 text-blue-700 font-bold py-3 rounded-xl text-sm border border-blue-200" onClick={()=>alert("電話発信")}>📞 電話</button>
+                </div>
+                <p className="text-xs text-gray-400 text-center">※ 最終金額は現地確認後に確定</p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="max-w-lg mx-auto min-h-screen bg-gray-50">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-5 pb-4 sticky top-0 z-20 shadow-md">
+            <h1 className="text-white font-bold text-base">おそうじ本舗 大井町店</h1>
+            <p className="text-blue-100 text-xs mt-0.5">クリーニングメニューを選択してください</p>
+          </div>
+          <div className="sticky top-[76px] z-10 bg-gray-50 px-4 pt-3 pb-2">
+            <div className="flex gap-2 flex-wrap">{cats.map((c) => <button key={c} onClick={() => setFCat(c)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${fCat === c ? "bg-blue-500 text-white" : "bg-white text-gray-600 border border-gray-200"}`}>{c}</button>)}</div>
+          </div>
+          <div className="px-4 pt-2 pb-32 space-y-3">
+            {filtered.map((svc) => {
+              const active = !!sel[svc.id]; const sl = sel[svc.id]; const qty = sl?.qty || 1; const sub = calcTotal(svc, sl);
+              return (
+                <div key={svc.id} className={`rounded-xl border-2 transition-all ${active ? "border-blue-500 bg-white shadow-lg" : "border-gray-200 bg-white hover:border-gray-300"}`}>
+                  <div className="p-4 cursor-pointer flex items-start gap-3" onClick={() => toggle(svc.id)}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap"><CatBadge cat={svc.category} /><span className="font-bold text-gray-900 text-sm">{svc.name}</span></div>
+                      <p className="text-xs text-gray-500 mt-1">{svc.desc}</p>
+                      {svc.detail && (
+                        <div className="mt-1">
+                          <InfoBtn open={!!svcDetail[svc.id]} onClick={() => setSvcDetail((p) => ({ ...p, [svc.id]: !p[svc.id] }))} label="詳しく見る" />
+                          {svcDetail[svc.id] && (
+                            <div className="mt-2 bg-blue-50 rounded-lg p-3 space-y-2 text-xs animate-fadeIn" onClick={(e) => e.stopPropagation()}>
+                              <div><p className="font-bold text-gray-700 mb-1">作業範囲</p><div className="flex flex-wrap gap-1">{svc.detail.scope.map((s) => <span key={s} className="bg-white text-gray-600 px-2 py-0.5 rounded-md border border-blue-100">{s}</span>)}</div></div>
+                              <div><p className="font-bold text-gray-700 mb-0.5">所要時間</p><p className="text-gray-600">{svc.detail.time}</p></div>
+                              {svc.detail.note && <div><p className="font-bold text-gray-700 mb-0.5">作業の流れ</p><p className="text-gray-600">{svc.detail.note}</p></div>}
+                              {svc.detail.recommend && <div className="bg-white rounded-md p-2 border border-blue-100"><p className="font-bold text-blue-600 mb-0.5">こんな方におすすめ</p><p className="text-gray-600">{svc.detail.recommend}</p></div>}
+                              <YoutubeEmbed url={svc.detail.youtube} />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <p className="text-sm font-bold text-blue-600 mt-1">{fmt(svc.variants[0].price1)}〜</p>
+                    </div>
+                    <div className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-1 ${active ? "bg-blue-500 border-blue-500" : "border-gray-300"}`}>{active && <span className="text-white text-sm font-bold">✓</span>}</div>
+                  </div>
+                  {active && (
+                    <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-3">
+                      {svc.variants.length > 1 && <div><label className="text-xs font-medium text-gray-600 mb-1.5 block">タイプ</label><div className="flex gap-2 flex-wrap">{svc.variants.map((v) => <button key={v.id} onClick={() => upd(svc.id, { variantId: v.id })} className={`text-xs px-3 py-1.5 rounded-lg border font-medium ${sl.variantId === v.id ? "bg-blue-50 border-blue-400 text-blue-700" : "border-gray-200 text-gray-600"}`}>{v.label}（{fmt(v.price1)}）</button>)}</div></div>}
+                      <div>
+                        <label className="text-xs font-medium text-gray-600 mb-1.5 block">{svc.quantityLabel}</label>
+                        <div className="flex items-center gap-1">{Array.from({ length: svc.maxQty }, (_, i) => i + 1).map((n) => <button key={n} onClick={() => { const nOQ = { ...(sl.optionQtys || {}) }; for (const oid of Object.keys(nOQ)) { const o = svc.options.find((x) => x.id === oid); if (o?.qtyable && nOQ[oid] > n) nOQ[oid] = n; } upd(svc.id, { qty: n, optionQtys: nOQ }); }} className={`w-9 h-9 rounded-lg text-sm font-bold border ${qty === n ? "bg-blue-500 text-white border-blue-500" : "border-gray-200 text-gray-600"}`}>{n}</button>)}</div>
+                        {(() => { const v = svc.variants.find((x) => x.id === sl.variantId) || svc.variants[0]; return qty >= 2 && v.priceN < v.price1 ? <p className="text-xs text-green-600 mt-1 font-medium">2台以上割引適用！ 1台 {fmt(v.priceN)}</p> : null; })()}
+                      </div>
+                      {svc.options.length > 0 && <div><label className="text-xs font-medium text-gray-600 mb-1.5 block">オプション</label><div className="space-y-1.5">{svc.options.map((opt) => {
+                        const oq = (sl.optionQtys || {})[opt.id] || 0; const isOn = oq > 0; const mx = opt.qtyable ? qty : 1;
+                        const odk = svc.id + "_" + opt.id;
+                        return (
+                          <div key={opt.id} className={`p-2.5 rounded-lg text-sm ${isOn ? "bg-blue-50" : "hover:bg-gray-50"}`}>
+                            {opt.qtyable ? (
+                              <><div className="flex items-center gap-2"><div className="flex-1 min-w-0"><span className="text-gray-700">{opt.label}</span><span className="text-xs text-gray-400 ml-1">+{fmt(opt.price)}/{opt.per}</span></div><OQC value={oq} max={mx} onChange={(nq) => { const next = { ...(sl.optionQtys || {}), [opt.id]: nq }; if (nq === 0) delete next[opt.id]; upd(svc.id, { optionQtys: next }); }} />{isOn && <span className="text-xs text-blue-600 font-medium w-16 text-right">+{fmt(opt.price * oq)}</span>}</div>
+                              {opt.detail && <InfoBtn open={!!optDetail[odk]} onClick={() => setOptDetail((p) => ({ ...p, [odk]: !p[odk] }))} />}
+                              {optDetail[odk] && opt.detail && <div className="mt-1.5 bg-gray-50 rounded-lg p-2.5 text-xs animate-fadeIn border border-gray-100" onClick={(e) => e.stopPropagation()}><p className="text-gray-600 leading-relaxed">{opt.detail.text}</p><MediaGrid images={opt.detail.images} youtube={opt.detail.youtube} /></div>}</>
+                            ) : (
+                              <><label className="flex items-start gap-2 cursor-pointer"><input type="checkbox" checked={isOn} onChange={() => { const next = { ...(sl.optionQtys || {}), [opt.id]: isOn ? 0 : 1 }; if (next[opt.id] === 0) delete next[opt.id]; upd(svc.id, { optionQtys: next }); }} className="w-4 h-4 rounded accent-blue-500 mt-0.5" /><div className="flex-1"><span className="text-gray-700">{opt.label}</span></div><span className="text-xs text-gray-500 font-medium">+{fmt(opt.price)}/{opt.per}</span></label>
+                              <div className="ml-6">{opt.detail && <InfoBtn open={!!optDetail[odk]} onClick={() => setOptDetail((p) => ({ ...p, [odk]: !p[odk] }))} />}{optDetail[odk] && opt.detail && <div className="mt-1.5 bg-gray-50 rounded-lg p-2.5 text-xs animate-fadeIn border border-gray-100" onClick={(e) => e.stopPropagation()}><p className="text-gray-600 leading-relaxed">{opt.detail.text}</p><MediaGrid images={opt.detail.images} youtube={opt.detail.youtube} /></div>}</div></>
+                            )}
+                          </div>
+                        );
+                      })}</div></div>}
+                      <div className="bg-gray-50 rounded-lg p-3 flex justify-between items-center"><span className="text-xs text-gray-500">小計</span><span className="text-lg font-bold text-blue-600">{fmt(sub)}</span></div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {sc > 0 && <div className="fixed bottom-0 left-0 right-0 z-30"><div className="max-w-lg mx-auto bg-white border-t shadow-2xl p-4 rounded-t-2xl"><div className="flex items-center justify-between"><div><p className="text-xs text-gray-500">{sc}件選択中</p><p className="text-xl font-bold text-blue-600">{fmt(gt)}<span className="text-xs text-gray-400 font-normal ml-1">（税込）</span></p></div><button onClick={() => setShowSum(true)} className="bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg text-sm active:scale-[0.98]">見積もりを確認 →</button></div></div></div>}
+        </div>
+      );
+    };
+
+    const Field = ({ label, value, onChange, type = "text", placeholder = "", textarea = false, small = false }) => (
+      <div className={small ? "flex-1" : ""}>
+        <label className="text-xs text-gray-500 mb-0.5 block">{label}</label>
+        {textarea ? <textarea rows={2} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-blue-400" />
+        : <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />}
+      </div>
+    );
+
+    const AdminView = ({ services, setServices }) => {
+      const [editSvc, setEditSvc] = useState(null);
+      const [editOpt, setEditOpt] = useState(null);
+
+      const updSvc = (id, patch) => setServices((p) => p.map((s) => s.id === id ? { ...s, ...patch } : s));
+      const updSvcDetail = (id, patch) => setServices((p) => p.map((s) => s.id === id ? { ...s, detail: { ...s.detail, ...patch } } : s));
+      const delSvc = (id) => { if (confirm("このサービスを削除しますか？")) setServices((p) => p.filter((s) => s.id !== id)); };
+      const addSvc = () => {
+        const ns = { id: genId(), category: "エアコン", name: "新しいサービス", desc: "", detail: { scope: [], time: "", note: "", recommend: "", youtube: "" }, variants: [{ id: "std", label: "標準", price1: 10000, priceN: 10000 }], quantityLabel: "台数", maxQty: 4, options: [] };
+        setServices((p) => [...p, ns]); setEditSvc(ns.id);
+      };
+      const updOpt = (svcId, optId, patch) => setServices((p) => p.map((s) => s.id === svcId ? { ...s, options: s.options.map((o) => o.id === optId ? { ...o, ...patch } : o) } : s));
+      const updOptDetail = (svcId, optId, patch) => setServices((p) => p.map((s) => s.id === svcId ? { ...s, options: s.options.map((o) => o.id === optId ? { ...o, detail: { ...(o.detail || {}), ...patch } } : o) } : s));
+      const delOpt = (svcId, optId) => setServices((p) => p.map((s) => s.id === svcId ? { ...s, options: s.options.filter((o) => o.id !== optId) } : s));
+      const addOpt = (svcId) => {
+        const no = { id: genId(), label: "新しいオプション", price: 0, per: "式", detail: { text: "", images: [], youtube: "" } };
+        setServices((p) => p.map((s) => s.id === svcId ? { ...s, options: [...s.options, no] } : s));
+        setEditOpt(svcId + "_" + no.id);
+      };
+
+      return (
+        <div className="max-w-2xl mx-auto min-h-screen bg-gray-50 p-4">
+          <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="bg-gradient-to-r from-gray-700 to-gray-800 p-5">
+              <h2 className="text-white text-lg font-bold">管理画面 — サービスマスター</h2>
+              <p className="text-gray-300 text-xs mt-0.5">メニュー・オプション・詳細情報の編集</p>
+            </div>
+            <div className="p-4 space-y-3">
+              {services.map((svc) => {
+                const isOpen = editSvc === svc.id;
+                return (
+                  <div key={svc.id} className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="p-3 flex items-center gap-2 cursor-pointer bg-gray-50 hover:bg-gray-100" onClick={() => setEditSvc(isOpen ? null : svc.id)}>
+                      <CatBadge cat={svc.category} />
+                      <span className="font-bold text-sm flex-1">{svc.name}</span>
+                      <span className="text-xs text-gray-400">{svc.options.length}オプション</span>
+                      <Chevron open={isOpen} cls="text-gray-400" />
+                    </div>
+                    {isOpen && (
+                      <div className="p-4 space-y-4 border-t border-gray-100 animate-fadeIn">
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="サービス名" value={svc.name} onChange={(v) => updSvc(svc.id, { name: v })} />
+                          <Field label="カテゴリ" value={svc.category} onChange={(v) => updSvc(svc.id, { category: v })} />
+                        </div>
+                        <Field label="説明文" value={svc.desc} onChange={(v) => updSvc(svc.id, { desc: v })} />
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="数量ラベル" value={svc.quantityLabel} onChange={(v) => updSvc(svc.id, { quantityLabel: v })} />
+                          <Field label="最大数量" value={svc.maxQty} onChange={(v) => updSvc(svc.id, { maxQty: parseInt(v) || 1 })} type="number" />
+                        </div>
+
+                        <div className="bg-blue-50 rounded-lg p-3 space-y-2">
+                          <p className="text-xs font-bold text-blue-700">サービス詳細（アコーディオン内）</p>
+                          <Field label="作業範囲（カンマ区切り）" value={(svc.detail?.scope || []).join(",")} onChange={(v) => updSvcDetail(svc.id, { scope: v.split(",").map((s) => s.trim()).filter(Boolean) })} />
+                          <Field label="所要時間" value={svc.detail?.time || ""} onChange={(v) => updSvcDetail(svc.id, { time: v })} />
+                          <Field label="作業の流れ" value={svc.detail?.note || ""} onChange={(v) => updSvcDetail(svc.id, { note: v })} textarea />
+                          <Field label="おすすめポイント" value={svc.detail?.recommend || ""} onChange={(v) => updSvcDetail(svc.id, { recommend: v })} textarea />
+                          <Field label="YouTube URL" value={svc.detail?.youtube || ""} onChange={(v) => updSvcDetail(svc.id, { youtube: v })} placeholder="https://www.youtube.com/watch?v=..." />
+                          {svc.detail?.youtube && <YoutubeEmbed url={svc.detail.youtube} />}
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className="text-xs font-bold text-gray-600">バリアント（価格タイプ）</p>
+                          {svc.variants.map((v, vi) => (
+                            <div key={v.id} className="flex gap-2 items-end">
+                              <Field label="ラベル" value={v.label} onChange={(val) => { const nv = [...svc.variants]; nv[vi] = { ...nv[vi], label: val }; updSvc(svc.id, { variants: nv }); }} small />
+                              <Field label="1台価格" value={v.price1} onChange={(val) => { const nv = [...svc.variants]; nv[vi] = { ...nv[vi], price1: parseInt(val) || 0 }; updSvc(svc.id, { variants: nv }); }} type="number" small />
+                              <Field label="2台〜価格" value={v.priceN} onChange={(val) => { const nv = [...svc.variants]; nv[vi] = { ...nv[vi], priceN: parseInt(val) || 0 }; updSvc(svc.id, { variants: nv }); }} type="number" small />
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between"><p className="text-xs font-bold text-gray-600">オプション</p><button onClick={() => addOpt(svc.id)} className="text-xs text-blue-600 hover:text-blue-800 font-medium">+ 追加</button></div>
+                          {svc.options.map((opt) => {
+                            const odk = svc.id + "_" + opt.id; const oOpen = editOpt === odk;
+                            return (
+                              <div key={opt.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="p-2 flex items-center gap-2 bg-gray-50 cursor-pointer hover:bg-gray-100" onClick={() => setEditOpt(oOpen ? null : odk)}>
+                                  <span className="text-sm flex-1 font-medium">{opt.label}</span>
+                                  <span className="text-xs text-gray-400">{fmt(opt.price)}/{opt.per}</span>
+                                  <Chevron open={oOpen} cls="text-gray-300" />
+                                </div>
+                                {oOpen && (
+                                  <div className="p-3 space-y-2 border-t border-gray-100 animate-fadeIn">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <Field label="ラベル" value={opt.label} onChange={(v) => updOpt(svc.id, opt.id, { label: v })} />
+                                      <div className="flex gap-2">
+                                        <Field label="価格" value={opt.price} onChange={(v) => updOpt(svc.id, opt.id, { price: parseInt(v) || 0 })} type="number" small />
+                                        <Field label="単位" value={opt.per} onChange={(v) => updOpt(svc.id, opt.id, { per: v })} small />
+                                      </div>
+                                    </div>
+                                    <label className="flex items-center gap-2 text-xs text-gray-600"><input type="checkbox" checked={!!opt.qtyable} onChange={(e) => updOpt(svc.id, opt.id, { qtyable: e.target.checked })} className="accent-blue-500" />数量個別選択を有効にする</label>
+
+                                    <div className="bg-gray-50 rounded-lg p-2.5 space-y-2">
+                                      <p className="text-xs font-bold text-gray-500">オプション詳細</p>
+                                      <Field label="説明テキスト" value={opt.detail?.text || ""} onChange={(v) => updOptDetail(svc.id, opt.id, { text: v })} textarea />
+                                      <Field label="画像URL（カンマ区切り）" value={(opt.detail?.images || []).join(",")} onChange={(v) => updOptDetail(svc.id, opt.id, { images: v.split(",").map((s) => s.trim()).filter(Boolean) })} placeholder="https://...jpg, https://...png" />
+                                      <Field label="YouTube URL" value={opt.detail?.youtube || ""} onChange={(v) => updOptDetail(svc.id, opt.id, { youtube: v })} placeholder="https://www.youtube.com/watch?v=..." />
+                                      {opt.detail?.youtube && <YoutubeEmbed url={opt.detail.youtube} />}
+                                    </div>
+                                    <button onClick={() => delOpt(svc.id, opt.id)} className="text-xs text-red-500 hover:text-red-700">このオプションを削除</button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <button onClick={() => delSvc(svc.id)} className="text-xs text-red-500 hover:text-red-700 mt-2">このサービスを削除</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <button onClick={addSvc} className="w-full border-2 border-dashed border-gray-300 rounded-xl p-4 text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors text-sm font-medium">+ 新しいサービスを追加</button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    function App() {
+      const [services, setServices] = useState(DEFAULT_SERVICES);
+      const [mode, setMode] = useState("customer");
+
+      return (
+        <div className="min-h-screen bg-gray-100">
+          <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}.animate-fadeIn{animation:fadeIn .2s ease-out}`}</style>
+          <div className="fixed top-2 right-2 z-50 flex bg-white rounded-full shadow-lg border border-gray-200 p-0.5">
+            <button onClick={() => setMode("customer")} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${mode === "customer" ? "bg-blue-500 text-white" : "text-gray-600 hover:text-blue-600"}`}>お客様画面</button>
+            <button onClick={() => setMode("admin")} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${mode === "admin" ? "bg-gray-700 text-white" : "text-gray-600 hover:text-gray-800"}`}>管理画面</button>
+          </div>
+          {mode === "customer" ? <CustomerView services={services} /> : <AdminView services={services} setServices={setServices} />}
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
